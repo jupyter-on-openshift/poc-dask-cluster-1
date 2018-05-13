@@ -1,0 +1,202 @@
+{
+    "kind": "List",
+    "apiVersion": "v1",
+    "items": [
+        {
+            "kind": "Template",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "poc-dask-cluster-1",
+                "annotations": {
+                    "openshift.io/display-name": "Dask Cluster POC#1",
+                    "iconClass": "icon-python",
+                    "tags": "python,jupyter,dask"
+                }
+            },
+            "parameters": [
+                {
+                    "name": "APPLICATION_NAME",
+                    "value": "poc-dask-cluster-1",
+                    "required": true
+                },
+                {
+                    "name": "NOTEBOOK_PASSWORD",
+                    "value": "",
+                    "required": true
+                },
+                {
+                    "name": "DASK_WORKERS",
+                    "value": "3",
+                    "required": true
+                }
+            ],
+            "objects": [
+                {
+                    "kind": "ImageStream",
+                    "apiVersion": "v1",
+                    "metadata": {
+                        "name": "${APPLICATION_NAME}-img",
+                        "labels": {
+                            "app": "${APPLICATION_NAME}"
+                        }
+                    }
+                },
+                {
+                    "kind": "BuildConfig",
+                    "apiVersion": "v1",
+                    "metadata": {
+                        "name": "${APPLICATION_NAME}-img",
+                        "labels": {
+                            "app": "${APPLICATION_NAME}"
+                        }
+                    },
+                    "spec": {
+                        "triggers": [
+                            {
+                                "type": "ConfigChange"
+                            },
+                            {
+                                "type": "ImageChange"
+                            }
+                        ],
+                        "source": {
+                            "type": "Git",
+                            "git": {
+                                "uri": "https://github.com/jupyter-on-openshift/poc-dask-cluster-1.git"
+                            }
+                        },
+                        "strategy": {
+                            "type": "Source",
+                            "sourceStrategy": {
+                                "from": {
+                                    "kind": "DockerImage",
+                                    "name": "centos/python-35-centos7:latest"
+                                }
+                            }
+                        },
+                        "output": {
+                            "to": {
+                                "kind": "ImageStreamTag",
+                                "name": "${APPLICATION_NAME}-img:latest"
+                            }
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "3Gi"
+                            }
+                        }
+                    }
+                },
+                {
+                    "kind": "DeploymentConfig",
+                    "apiVersion": "v1",
+                    "metadata": {
+                        "name": "${APPLICATION_NAME}",
+                        "labels": {
+                            "app": "${APPLICATION_NAME}"
+                        }
+                    },
+                    "spec": {
+                        "strategy": {
+                            "type": "Recreate"
+                        },
+                        "triggers": [
+                            {
+                                "type": "ConfigChange"
+                            },
+                            {
+                                "type": "ImageChange",
+                                "imageChangeParams": {
+                                    "automatic": true,
+                                    "containerNames": [
+                                        "notebook"
+                                    ],
+                                    "from": {
+                                        "kind": "ImageStreamTag",
+                                        "name": "${APPLICATION_NAME}-img:latest"
+                                    }
+                                }
+                            }
+                        ],
+                        "replicas": 1,
+                        "selector": {
+                            "app": "${APPLICATION_NAME}",
+                            "deploymentconfig": "${APPLICATION_NAME}"
+                        },
+                        "template": {
+                            "metadata": {
+                                "labels": {
+                                    "app": "${APPLICATION_NAME}",
+                                    "deploymentconfig": "${APPLICATION_NAME}"
+                                }
+                            },
+                            "spec": {
+                                "containers": [
+                                    {
+                                        "name": "notebook",
+                                        "image": "${APPLICATION_NAME}-img:latest",
+                                        "ports": [
+                                            {
+                                                "containerPort": 8080,
+                                                "protocol": "TCP"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
+                    "kind": "Service",
+                    "apiVersion": "v1",
+                    "metadata": {
+                        "name": "${APPLICATION_NAME}",
+                        "labels": {
+                            "app": "${APPLICATION_NAME}"
+                        }
+                    },
+                    "spec": {
+                        "ports": [
+                            {
+                                "name": "8080-tcp",
+                                "protocol": "TCP",
+                                "port": 8080,
+                                "targetPort": 8080
+                            }
+                        ],
+                        "selector": {
+                            "app": "${APPLICATION_NAME}",
+                            "deploymentconfig": "${APPLICATION_NAME}"
+                        }
+                    }
+                },
+                {
+                    "kind": "Route",
+                    "apiVersion": "v1",
+                    "metadata": {
+                        "name": "${APPLICATION_NAME}",
+                        "labels": {
+                            "app": "${APPLICATION_NAME}"
+                        }
+                    },
+                    "spec": {
+                        "host": "",
+                        "to": {
+                            "kind": "Service",
+                            "name": "${APPLICATION_NAME}",
+                            "weight": 100
+                        },
+                        "port": {
+                            "targetPort": "8080-tcp"
+                        },
+                        "tls": {
+                            "termination": "edge",
+                            "insecureEdgeTerminationPolicy": "Redirect"
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
