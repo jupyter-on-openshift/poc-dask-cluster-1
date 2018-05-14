@@ -36,7 +36,7 @@
                 },
                 {
                     "name": "DASK_WORKER_MEMORY",
-                    "value": "512Mi",
+                    "value": "1Gi",
                     "required": true
                 }
             ],
@@ -405,7 +405,7 @@
                                         ],
                                         "resources": {
                                             "limits": {
-                                                "memory": "512Mi"
+                                                "memory": "256Mi"
                                             }
                                         }
                                     }
