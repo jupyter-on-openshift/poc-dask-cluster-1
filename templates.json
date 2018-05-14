@@ -93,7 +93,7 @@
                         },
                         "resources": {
                             "limits": {
-                                "memory": "3Gi"
+                                "memory": "2Gi"
                             }
                         }
                     }
